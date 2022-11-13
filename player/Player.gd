@@ -3,10 +3,16 @@ extends KinematicBody2D
 var direction = Vector2()
 var health = 3
 
+export var receives_knockback = true
+export var knockback_modifier = 0.1
+
 onready var remoteTransform2D = $RemoteTransform2D
 onready	var	camerad2D = $Camera2D
 onready var displayUsername = $DisplayUsername
 onready var displayHealth = $DisplayHealth
+onready var animationPlayer = $AnimationPlayer
+onready var hitBox = $HitBox
+onready var collisionShape = $HitBox/CollisionShape2D
 
 func _ready():
 	$DisplayUsername.text = Network.username
@@ -32,6 +38,11 @@ remotesync func share_name(data):
 remotesync func position(data):
 	position = data
 	
+remotesync func sword_position(data):
+	hitBox.position = data['position']
+	hitBox.rotation = data['rotation']
+	collisionShape.disabled = data['collsion_shape_disabled']
+
 remotesync func health(data):
 	health = data
 	displayHealth.text = "Health: " + str(health)
@@ -42,7 +53,26 @@ func _physics_process(delta):
 
 	move_and_slide(direction * 200)
 	rpc_unreliable("position", position)
+	
+	if Input.is_action_just_pressed("attack"):
+		animationPlayer.play("Attack")
+		
+	var hitbox_pos = {
+		"position": hitBox.position,
+		"rotation": hitBox.rotation,
+		"collsion_shape_disabled": collisionShape.disabled
+	}
+	
+	rpc_unreliable("sword_position", hitbox_pos)
 
+
+func receive_knockback(damage_source_position: Vector2, received_damage: int):
+	var knockback_direction = damage_source_position.direction_to(self.global_position)
+	var knockback_strength = received_damage * knockback_modifier
+	var knockback = knockback_direction * knockback_strength
+	
+	move_and_slide(knockback*300)
+	rpc_unreliable("position", position)
 
 func _on_HurtBox_area_entered(area):
 	if is_network_master():
@@ -50,3 +80,5 @@ func _on_HurtBox_area_entered(area):
 		health -= 1
 		rpc("health", health)
 		displayHealth.text = "Health: " + str(health)
+		
+		receive_knockback(area.global_position, 100)
