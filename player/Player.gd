@@ -14,7 +14,6 @@ func _ready():
 	yield(get_tree(), "idle_frame")
 	
 	set_physics_process(is_network_master())
-	$Controlled.visible = is_network_master()
 	
 	_on_network_peer_connected("")
 
