@@ -2,6 +2,9 @@ extends KinematicBody2D
 
 var direction = Vector2()
 
+onready var remoteTransform2D = $RemoteTransform2D
+onready	var	camerad2D = $Camera2D
+
 func _ready():
 	$DisplayUsername.text = Network.username
 	get_tree().connect("network_peer_connected", self, "_on_network_peer_connected")
@@ -17,6 +20,8 @@ func _ready():
 
 func _on_network_peer_connected(id):
 	if is_network_master():
+		remoteTransform2D.remote_path = "Camera2D"
+		camerad2D.current = true
 		rpc("share_name", $DisplayUsername.text)
 
 remotesync func share_name(data):
