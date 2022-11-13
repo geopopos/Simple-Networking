@@ -1,9 +1,12 @@
 extends KinematicBody2D
 
 var direction = Vector2()
+var health = 3
 
 onready var remoteTransform2D = $RemoteTransform2D
 onready	var	camerad2D = $Camera2D
+onready var displayUsername = $DisplayUsername
+onready var displayHealth = $DisplayHealth
 
 func _ready():
 	$DisplayUsername.text = Network.username
@@ -28,10 +31,22 @@ remotesync func share_name(data):
 
 remotesync func position(data):
 	position = data
+	
+remotesync func health(data):
+	health = data
+	displayHealth.text = "Health: " + str(health)
 
 func _physics_process(delta):
 	direction.x = -Input.get_action_strength("ui_left") + Input.get_action_strength("ui_right")
 	direction.y = -Input.get_action_strength("ui_up") + Input.get_action_strength("ui_down")
 
-	move_and_slide(direction * 500)
+	move_and_slide(direction * 200)
 	rpc_unreliable("position", position)
+
+
+func _on_HurtBox_area_entered(area):
+	if is_network_master():
+		# only call damage on player if is network master otherwise damage multiplies by the number of peers connected (host + x players)
+		health -= 1
+		rpc("health", health)
+		displayHealth.text = "Health: " + str(health)
